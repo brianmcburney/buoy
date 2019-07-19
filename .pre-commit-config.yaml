@@ -1,0 +1,18 @@
+repos:
+- repo: https://github.com/python/black
+  rev: stable
+  hooks:
+  - id: black
+    language_version: python3.7
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.2.3
+  hooks:
+  - id: trailing-whitespace
+  - id: end-of-file-fixer
+- repo: local
+  hooks:
+  - id: flake8
+    name: flake8
+    entry: pipenv run flake8 --filename='*.py'
+    language: system
+    types: [python]
