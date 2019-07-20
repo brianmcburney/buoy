@@ -6,7 +6,6 @@ import os
 import pickle
 import posixpath
 import re
-from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from types import TracebackType
@@ -16,6 +15,8 @@ import aiofiles
 import aiohttp
 import bs4
 
+from buoy.model import Station, StationReport
+
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -23,25 +24,6 @@ logger.setLevel(logging.INFO)
 
 
 BeautifulSoup = partial(bs4.BeautifulSoup, features="lxml")
-
-
-@dataclass
-class Station:
-    id: int
-    name: str
-    rss: str
-    latitude: float
-    longitude: float
-
-
-@dataclass
-class StationReport:
-    timestamp: datetime.datetime
-    wave_height: Optional[float] = None
-    wave_dominant_period: Optional[float] = None
-    wave_average_period: Optional[float] = None
-    wave_mean_degrees: Optional[float] = None
-    water_temperature: Optional[float] = None
 
 
 class NOAAClient:
@@ -91,7 +73,7 @@ class NOAAClient:
             async with aiofiles.open(local_file, "rb") as f:
                 data = await f.read()
                 station = pickle.loads(data)
-        except FileNotFoundError:
+        except (FileNotFoundError, AttributeError, EOFError):
             url = self._url(["station_page.php"])
             html = await self._get(url, {"station": station_id})
             if html:
@@ -136,7 +118,7 @@ class NOAAClient:
             return None
 
         timestamp = datetime.datetime.strptime(m.group(1), "%H%M %Z on %m/%d/%Y")
-        report = StationReport(timestamp)
+        report = StationReport(station_id, timestamp)
 
         table = caption.parent
         for row in table.findAll("tr"):
@@ -203,7 +185,9 @@ async def run() -> Optional[dict]:
         tasks = [client.station_report(station_id) for station_id in stations]
         result = await asyncio.gather(*tasks)
         reports = {
-            station_id: report for station_id, report in zip(stations, result)
+            station_id: report
+            for station_id, report in zip(stations, result)
+            if report is not None
         }  # noqa
 
         # tasks = [client.station(station_id) for station_id in stations]
