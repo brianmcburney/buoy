@@ -15,9 +15,12 @@ AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_KEY")
 
 
-def _json_serialize(obj: Any) -> Any:
-    if isinstance(obj, (datetime.datetime, datetime.date)):
-        return obj.isoformat()
+class BuoyEncoder(json.JSONEncoder):
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+
+        return json.JSONEncoder.default(self, obj)
 
 
 async def upload_data(objects: Dict[str, object]) -> None:
@@ -30,7 +33,7 @@ async def upload_data(objects: Dict[str, object]) -> None:
     ) as client:
         tasks = [
             client.put_object(
-                Bucket=BUCKET, Key=key, Body=json.dumps(data, default=_json_serialize)
+                Bucket=BUCKET, Key=key, Body=json.dumps(data, cls=BuoyEncoder)
             )
             for key, data in objects.items()
         ]
