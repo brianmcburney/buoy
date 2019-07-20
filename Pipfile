@@ -21,6 +21,7 @@ aiohttp = "*"
 aiofiles = "*"
 bs4 = "*"
 lxml = "*"
+aiobotocore = "*"
 
 [requires]
 python_version = "3.7"
